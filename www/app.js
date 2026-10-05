@@ -5,8 +5,13 @@ const CHAVE = "alunos_app_database";
 function carregar() {
     const salvo = localStorage.getItem(CHAVE);
     if (salvo) {
-        alunos = JSON.parse(salvo);
-        proximoId = alunos.length ? Math.max(...alunos.map(a => a.id)) + 1 : 1;
+        try {
+            alunos = JSON.parse(salvo);
+            proximoId = alunos.length ? Math.max(...alunos.map(a => a.id)) + 1 : 1;
+        } catch (e) {
+            alunos = [];
+            proximoId = 1;
+        }
     }
     listar();
 }
@@ -22,14 +27,34 @@ function listar() {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#64748b;">Nenhum aluno cadastrado.</td></tr>';
         return;
     }
-    alunos.forEach(a => {
-        tbody.innerHTML += `<tr>
-            <td>#\${a.id}</td>
-            <td><strong>\${a.nome}</strong></td>
-            <td>\${a.idade ? a.idade + " anos" : "-"}</td>
-            <td><button class="btn-del" onclick="excluir(\${a.id})">Excluir</button></td>
-        </tr>`;
-    });
+    for (let i = 0; i < alunos.length; i++) {
+        const a = alunos[i];
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = "#" + a.id;
+
+        const tdNome = document.createElement("td");
+        const strong = document.createElement("strong");
+        strong.textContent = a.nome;
+        tdNome.appendChild(strong);
+
+        const tdIdade = document.createElement("td");
+        tdIdade.textContent = a.idade ? a.idade + " anos" : "-";
+
+        const tdAcoes = document.createElement("td");
+        const btn = document.createElement("button");
+        btn.className = "btn-del";
+        btn.textContent = "Excluir";
+        btn.addEventListener("click", function () { excluir(a.id); });
+        tdAcoes.appendChild(btn);
+
+        tr.appendChild(tdId);
+        tr.appendChild(tdNome);
+        tr.appendChild(tdIdade);
+        tr.appendChild(tdAcoes);
+        tbody.appendChild(tr);
+    }
 }
 
 function salvar() {
@@ -37,7 +62,10 @@ function salvar() {
     const e = document.getElementById("email");
     const i = document.getElementById("idade");
 
-    if (!n.value.trim()) return alert("Preencha o nome!");
+    if (!n.value.trim()) {
+        alert("Preencha o nome!");
+        return;
+    }
 
     alunos.push({
         id: proximoId++,
@@ -46,7 +74,10 @@ function salvar() {
         idade: i.value.trim()
     });
 
-    n.value = e.value = i.value = "";
+    n.value = "";
+    e.value = "";
+    i.value = "";
+
     persistir();
     listar();
 }
@@ -59,11 +90,10 @@ function excluir(id) {
 
 carregar();
 
-// ===== Registro do Service Worker (PWA) =====
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js')
-            .then(() => console.log('Service Worker registrado'))
-            .catch(err => console.warn('Falha no SW:', err));
+            .then(function () { console.log('Service Worker registrado'); })
+            .catch(function (err) { console.warn('Falha no SW:', err); });
     });
 }
